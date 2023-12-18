@@ -7,18 +7,26 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
-var collectCmd = &cobra.Command{
-	Use:   "collect",
-	Short: "Collect the meaningful data on the web",
-	Long:  "Collect the meaningful data on the web",
-	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
-	},
+// This is the collect command.
+var collectCmd struct {
+	platform string
+	command  *cobra.Command
 }
 
 func init() {
-	RootCmd.AddCommand(collectCmd)
+	collectCmd.command = &cobra.Command{
+		Use:   "collect",
+		Short: "Collect the meaningful data on the web",
+		Long:  "Collect the meaningful data on the web",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(collectCmd.platform)
+		},
+	}
+	RootCmd.AddCommand(collectCmd.command)
+	collectCmd.command.Flags().StringVarP(&collectCmd.platform, "platform", "p", "", "social-media or search-engine to search keywords from")
 }
