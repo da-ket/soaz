@@ -15,6 +15,7 @@ import (
 // This is the collect command.
 var collectCmd struct {
 	platform string
+	keywords []string
 	command  *cobra.Command
 }
 
@@ -25,8 +26,11 @@ func init() {
 		Long:  "Collect the meaningful data on the web",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(collectCmd.platform)
+			fmt.Println(collectCmd.keywords)
 		},
 	}
 	RootCmd.AddCommand(collectCmd.command)
+
 	collectCmd.command.Flags().StringVarP(&collectCmd.platform, "platform", "p", "", "social-media or search-engine to search keywords from")
+	collectCmd.command.Flags().StringSliceVarP(&collectCmd.keywords, "keywords", "k", []string{}, "set the keywords to research in deep, it would be your brand or product names separated by a comma (e.g. '--keywords=cocacola,pepsi')")
 }
