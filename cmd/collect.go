@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"unicode/utf8"
 
+	"github.com/da-ket/soaz/bot"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +42,10 @@ func init() {
 				}
 			}
 
-			// TODO (da-ket): Deduplicate keywords should be handled here.
+			// TODO (da-ket): Platform flag is mandatory.
+			// TODO (da-ket): Keywords flag is mandatory.
+			// TODO (da-ket): Unsupported platforms should return error.
+			// TODO (da-ket): Deduplicate keywords should be handled.
 
 			collectCmd.err = nil
 		},
@@ -51,8 +55,7 @@ func init() {
 				fmt.Println(cmd.UsageString())
 				return
 			}
-			fmt.Println(collectCmd.platform)
-			fmt.Println(collectCmd.keywords)
+			fmt.Println(bot.ReadPage(collectCmd.keywords))
 		},
 	}
 	RootCmd.AddCommand(collectCmd.command)
