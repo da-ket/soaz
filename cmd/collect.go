@@ -42,8 +42,6 @@ func init() {
 				}
 			}
 
-			// TODO (da-ket): Platform flag is mandatory.
-			// TODO (da-ket): Keywords flag is mandatory.
 			// TODO (da-ket): Unsupported platforms should return error.
 			// TODO (da-ket): Deduplicate keywords should be handled.
 
@@ -62,4 +60,6 @@ func init() {
 
 	collectCmd.command.Flags().StringVarP(&collectCmd.platform, "platform", "p", "", "social-media or search-engine to search keywords from")
 	collectCmd.command.Flags().StringSliceVarP(&collectCmd.keywords, "keywords", "k", []string{}, "set the keywords to research in deep, it would be your brand or product names separated by a comma (e.g. '--keywords=cocacola,pepsi')")
+	collectCmd.command.MarkFlagRequired("platform")
+	collectCmd.command.MarkFlagRequired("keywords")
 }
