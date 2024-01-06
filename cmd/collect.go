@@ -53,7 +53,7 @@ func init() {
 				fmt.Println(cmd.UsageString())
 				return
 			}
-			fmt.Println(bot.ReadPage(collectCmd.keywords))
+			fmt.Println(bot.ReadNaverBlogs(collectCmd.keywords))
 		},
 	}
 	RootCmd.AddCommand(collectCmd.command)
