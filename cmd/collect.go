@@ -42,7 +42,12 @@ func init() {
 				}
 			}
 
-			// TODO (da-ket): Unsupported platforms should return error.
+			// Check if it is supported platform type or not.
+			platformType := bot.StringToPlatformType(collectCmd.platform)
+			if platformType == bot.Unsupported {
+				collectCmd.err = fmt.Errorf("the platform %s is not supported", collectCmd.platform)
+				return
+			}
 			// TODO (da-ket): Deduplicate keywords should be handled.
 
 			collectCmd.err = nil
@@ -53,12 +58,22 @@ func init() {
 				fmt.Println(cmd.UsageString())
 				return
 			}
-			fmt.Println(bot.ReadNaverBlogs(collectCmd.keywords))
+
+			platformType := bot.StringToPlatformType(collectCmd.platform)
+			switch platformType {
+			case bot.NaverBlog:
+				fmt.Println(bot.ReadNaverBlogs(collectCmd.keywords))
+			default:
+				// Unreachable code.
+				// During the pre-run phase, the error-handling for unsupported platform types has been completed.
+				// However, it was added for the program's safety.
+				panic(fmt.Errorf("the platform (%s) is not supported", collectCmd.platform))
+			}
 		},
 	}
 	RootCmd.AddCommand(collectCmd.command)
 
-	collectCmd.command.Flags().StringVarP(&collectCmd.platform, "platform", "p", "", "social-media or search-engine to search keywords from")
+	collectCmd.command.Flags().StringVarP(&collectCmd.platform, "platform", "p", "", fmt.Sprintf("social-media or search-engine to search keywords from (choose one of from: %s)", bot.SupportedPlatformTypes()))
 	collectCmd.command.Flags().StringSliceVarP(&collectCmd.keywords, "keywords", "k", []string{}, "set the keywords to research in deep, it would be your brand or product names separated by a comma (e.g. '--keywords=cocacola,pepsi')")
 	collectCmd.command.MarkFlagRequired("platform")
 	collectCmd.command.MarkFlagRequired("keywords")
