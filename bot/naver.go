@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/chromedp/chromedp"
@@ -50,12 +51,44 @@ func ReadNaverBlogs(keywords []string) (string, error) {
 			err := chromedp.Run(ctx,
 				chromedp.Text(fmt.Sprintf("li#sp_blog_%d div.title_area", i), &b.title),
 				chromedp.Attributes(fmt.Sprintf("li#sp_blog_%d div.title_area a", i), &attrs),
-				chromedp.Text(fmt.Sprintf("li#sp_blog_%d div.dsc_area", i), &b.content),
 			)
-			if err == nil {
-				b.link = attrs["href"]
-				ch <- b
+			if err != nil {
+				panic(err)
 			}
+			b.link = attrs["href"]
+
+			subCtx, subCancel := chromedp.NewContext(
+				context.Background(),
+				chromedp.WithDebugf(log.Printf),
+			)
+			defer subCancel()
+
+			err = chromedp.Run(subCtx,
+				chromedp.Navigate(b.link),
+				chromedp.WaitVisible("iframe#mainFrame"),
+				chromedp.Attributes("iframe#mainFrame", &attrs),
+			)
+			if err != nil {
+				panic(err)
+			}
+
+			// We don't want to parse the annoying iframe.
+			// Navigate to source page of iframe directly.
+			b.link = fmt.Sprintf("http://blog.naver.com%s", attrs["src"])
+			err = chromedp.Run(subCtx,
+				chromedp.Navigate(b.link),
+				chromedp.WaitVisible("div.se-main-container"),
+				chromedp.Text(`div.se-main-container`, &b.content),
+			)
+			if err != nil {
+				panic(err)
+			}
+
+			// Concatenate all words with a single whitespace.
+			removeDuplicateSpaces := regexp.MustCompile(`\s+`)
+			b.content = removeDuplicateSpaces.ReplaceAllString(b.content, " ")
+
+			ch <- b
 		}(i)
 	}
 
@@ -69,7 +102,7 @@ func ReadNaverBlogs(keywords []string) (string, error) {
 
 	var resultBuilder strings.Builder
 	for i, b := range blogs {
-		resultBuilder.WriteString(fmt.Sprintf("[blog info no.%d]\n  Title: %s\n  Link: %s\n  Content: %s\n\n", i+1, b.title, b.link, b.content))
+		resultBuilder.WriteString(fmt.Sprintf("[blog info no.%d]\nTitle: %s\nLink: %s\nContent: %s\n\n", i+1, b.title, b.link, b.content))
 	}
 	result := resultBuilder.String()
 
