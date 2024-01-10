@@ -9,11 +9,13 @@ package bot
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"regexp"
 	"strings"
 
 	"github.com/chromedp/chromedp"
+	"github.com/da-ket/soaz/gflag"
 )
 
 // blog is a struct representing information about a blog.
@@ -25,6 +27,10 @@ type blog struct {
 
 func ReadNaverBlogs(keywords []string) (string, error) {
 	const topN = 15
+
+	if gflag.G.SilentDebugMsg {
+		log.SetOutput(io.Discard)
+	}
 
 	ctx, cancel := chromedp.NewContext(
 		context.Background(),

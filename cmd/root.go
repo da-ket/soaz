@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/da-ket/soaz/gflag"
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +21,10 @@ var RootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
+}
+
+func init() {
+	RootCmd.PersistentFlags().BoolVarP(&gflag.G.SilentDebugMsg, "quiet", "q", false, "set the quiet mode to suppress debug message from command line output")
 }
 
 func Execute() {
