@@ -22,6 +22,18 @@ var collectCmd struct {
 	command  *cobra.Command
 }
 
+func dedupKeywords(keywords []string) []string {
+	m := make(map[string]string)
+	for _, k := range keywords {
+		m[k] = ""
+	}
+	dedupKeywords := make([]string, 0)
+	for key, _ := range m {
+		dedupKeywords = append(dedupKeywords, key)
+	}
+	return dedupKeywords
+}
+
 func init() {
 	collectCmd.command = &cobra.Command{
 		Use:   "collect",
@@ -48,7 +60,8 @@ func init() {
 				collectCmd.err = fmt.Errorf("the platform %s is not supported", collectCmd.platform)
 				return
 			}
-			// TODO (da-ket): Deduplicate keywords should be handled.
+
+			collectCmd.keywords = dedupKeywords(collectCmd.keywords)
 
 			collectCmd.err = nil
 		},
