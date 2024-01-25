@@ -25,6 +25,7 @@ type blog struct {
 	title   string
 	link    string
 	content string
+	err     error
 }
 
 func ReadNaverBlogs(keywords []string) (string, error) {
@@ -72,12 +73,13 @@ func ReadNaverBlogs(keywords []string) (string, error) {
 		go func(i int) {
 			b := blog{}
 			attrs := make(map[string]string, 0)
-			err := chromedp.Run(ctx,
+			b.err = chromedp.Run(ctx,
 				chromedp.Text(fmt.Sprintf("li#sp_blog_%d div.title_area", i), &b.title),
 				chromedp.Attributes(fmt.Sprintf("li#sp_blog_%d div.title_area a", i), &attrs),
 			)
-			if err != nil {
-				panic(err)
+			if b.err != nil {
+				ch <- b
+				return
 			}
 			b.link = attrs["href"]
 
@@ -90,24 +92,26 @@ func ReadNaverBlogs(keywords []string) (string, error) {
 				subCancel()
 			}()
 
-			err = chromedp.Run(subCtx,
+			b.err = chromedp.Run(subCtx,
 				chromedp.Navigate(b.link),
 				chromedp.WaitVisible("iframe#mainFrame"),
 				chromedp.Attributes("iframe#mainFrame", &attrs),
 			)
-			if err != nil {
-				panic(err)
+			if b.err != nil {
+				subCancel()
+				ch <- b
+				return
 			}
 
 			// We don't want to parse the annoying iframe.
 			// Navigate to source page of iframe directly.
 			b.link = fmt.Sprintf("http://blog.naver.com%s", attrs["src"])
-			err = chromedp.Run(subCtx,
+			b.err = chromedp.Run(subCtx,
 				chromedp.Navigate(b.link),
 				chromedp.WaitVisible("div.se-main-container"),
 				chromedp.Text(`div.se-main-container`, &b.content),
 			)
-			if err == context.Canceled {
+			if b.err == context.Canceled {
 				// Some blogs have '#postViewArea' rather than 'dev.se-main-container'.
 				// TODO(da-ket): clean up this.
 				subCtx, subCancel = chromedp.NewContext(
@@ -118,14 +122,16 @@ func ReadNaverBlogs(keywords []string) (string, error) {
 					time.Sleep(30 * time.Second)
 					subCancel()
 				}()
-				err = chromedp.Run(subCtx,
+				b.err = chromedp.Run(subCtx,
 					chromedp.Navigate(b.link),
 					chromedp.WaitVisible("#postViewArea"),
 					chromedp.Text(`#postViewArea`, &b.content),
 				)
 			}
-			if err != nil {
-				panic(err)
+			if b.err != nil {
+				subCancel()
+				ch <- b
+				return
 			}
 
 			// Concatenate all words with a single whitespace.
@@ -143,13 +149,17 @@ func ReadNaverBlogs(keywords []string) (string, error) {
 	blogs := make([]blog, topN)
 	// Wait goroutines.
 	for i := 0; i < topN; i++ {
-		b := <-ch
-		blogs[i] = b
+		blogs[i] = <-ch
 	}
 
 	var resultBuilder strings.Builder
 	for i, b := range blogs {
-		resultBuilder.WriteString(fmt.Sprintf("[blog info no.%d]\nTitle: %s\nLink: %s\nContent: %s\n\n", i+1, b.title, b.link, b.content))
+		if b.err != nil {
+			fmt.Printf("[Err]: %v\n", b.err)
+			return "", b.err
+		} else {
+			resultBuilder.WriteString(fmt.Sprintf("[blog info no.%d]\nTitle: %s\nLink: %s\nContent: %s\n\n", i+1, b.title, b.link, b.content))
+		}
 	}
 	result := resultBuilder.String()
 
