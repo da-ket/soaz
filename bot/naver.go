@@ -13,7 +13,9 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 	"github.com/da-ket/soaz/gflag"
 )
@@ -26,7 +28,7 @@ type blog struct {
 }
 
 func ReadNaverBlogs(keywords []string) (string, error) {
-	const topN = 15
+	topN := 15
 
 	if gflag.G.SilentDebugMsg {
 		log.SetOutput(io.Discard)
@@ -36,6 +38,10 @@ func ReadNaverBlogs(keywords []string) (string, error) {
 		context.Background(),
 		chromedp.WithDebugf(log.Printf),
 	)
+	go func() {
+		time.Sleep(60 * time.Second)
+		cancel()
+	}()
 	defer cancel()
 
 	// TODO: Retrieve data within the last 3 months
@@ -46,6 +52,18 @@ func ReadNaverBlogs(keywords []string) (string, error) {
 	)
 	if err != nil {
 		return "", err
+	}
+
+	// Adjusts 'topN' based on the actual number of blogs found.
+	var nodes []*cdp.Node
+	err = chromedp.Run(ctx,
+		chromedp.Nodes("ul.lst_view > li.bx", &nodes, chromedp.ByQueryAll),
+	)
+	if err != nil {
+		return "", err
+	}
+	if len(nodes) < topN {
+		topN = len(nodes)
 	}
 
 	// Parallel blog data scraping by goroutines.
@@ -67,7 +85,10 @@ func ReadNaverBlogs(keywords []string) (string, error) {
 				context.Background(),
 				chromedp.WithDebugf(log.Printf),
 			)
-			defer subCancel()
+			go func() {
+				time.Sleep(30 * time.Second)
+				subCancel()
+			}()
 
 			err = chromedp.Run(subCtx,
 				chromedp.Navigate(b.link),
@@ -86,6 +107,23 @@ func ReadNaverBlogs(keywords []string) (string, error) {
 				chromedp.WaitVisible("div.se-main-container"),
 				chromedp.Text(`div.se-main-container`, &b.content),
 			)
+			if err == context.Canceled {
+				// Some blogs have '#postViewArea' rather than 'dev.se-main-container'.
+				// TODO(da-ket): clean up this.
+				subCtx, subCancel = chromedp.NewContext(
+					context.Background(),
+					chromedp.WithDebugf(log.Printf),
+				)
+				go func() {
+					time.Sleep(30 * time.Second)
+					subCancel()
+				}()
+				err = chromedp.Run(subCtx,
+					chromedp.Navigate(b.link),
+					chromedp.WaitVisible("#postViewArea"),
+					chromedp.Text(`#postViewArea`, &b.content),
+				)
+			}
 			if err != nil {
 				panic(err)
 			}
@@ -95,6 +133,9 @@ func ReadNaverBlogs(keywords []string) (string, error) {
 			b.content = removeDuplicateSpaces.ReplaceAllString(b.content, " ")
 
 			ch <- b
+
+			// Cancel the subquery context.
+			subCancel()
 		}(i)
 	}
 
