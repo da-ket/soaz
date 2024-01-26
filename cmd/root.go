@@ -24,7 +24,7 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.PersistentFlags().BoolVarP(&gflag.G.SilentDebugMsg, "quiet", "q", false, "set the quiet mode to suppress debug message from command line output")
+	RootCmd.PersistentFlags().BoolVarP(&gflag.G.SilentDebugMsg, "quiet", "q", true, "set the quiet mode to suppress debug message from command line output")
 }
 
 func Execute() {
