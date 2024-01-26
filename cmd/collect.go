@@ -20,6 +20,7 @@ var collectCmd struct {
 	keywords []string
 	err      error
 	command  *cobra.Command
+	topN     int
 }
 
 func dedupKeywords(keywords []string) []string {
@@ -75,7 +76,7 @@ func init() {
 			platformType := bot.StringToPlatformType(collectCmd.platform)
 			switch platformType {
 			case bot.NaverBlog:
-				fmt.Println(bot.ReadNaverBlogs(collectCmd.keywords))
+				fmt.Println(bot.ReadNaverBlogs(collectCmd.keywords, collectCmd.topN))
 			default:
 				// Unreachable code.
 				// During the pre-run phase, the error-handling for unsupported platform types has been completed.
@@ -88,6 +89,7 @@ func init() {
 
 	collectCmd.command.Flags().StringVarP(&collectCmd.platform, "platform", "p", "", fmt.Sprintf("social-media or search-engine to search keywords from (choose one of from: %s)", bot.SupportedPlatformTypes()))
 	collectCmd.command.Flags().StringSliceVarP(&collectCmd.keywords, "keywords", "k", []string{}, "set the keywords to research in deep, it would be your brand or product names separated by a comma (e.g. '--keywords=cocacola,pepsi')")
+	collectCmd.command.Flags().IntVarP(&collectCmd.topN, "number", "n", 3, "set the number of blogs to retrieve")
 	collectCmd.command.MarkFlagRequired("platform")
 	collectCmd.command.MarkFlagRequired("keywords")
 }

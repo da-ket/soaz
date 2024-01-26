@@ -29,9 +29,7 @@ type blog struct {
 	err     error
 }
 
-func ReadNaverBlogs(keywords []string) (string, error) {
-	topN := 50
-
+func ReadNaverBlogs(keywords []string, topN int) (string, error) {
 	if gflag.G.SilentDebugMsg {
 		log.SetOutput(io.Discard)
 	}
