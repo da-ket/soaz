@@ -55,7 +55,7 @@ func ReadNaverBlogs(keywords []string, topN int) (string, error) {
 	`, topN/30, 300) // Scroll down times, wait ms per scroll.
 
 	// TODO: Retrieve data within the last 3 months
-	searchURL := fmt.Sprintf("https://search.naver.com/search.naver?where=blog&query=%s", strings.Join(keywords, "+"))
+	searchURL := fmt.Sprintf("https://search.naver.com/search.naver?ssc=tab.blog.all&sm=tab_jum&query=%s", strings.Join(keywords, "+"))
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(searchURL),
 		chromedp.Evaluate(scrollingScript, nil),
@@ -69,7 +69,7 @@ func ReadNaverBlogs(keywords []string, topN int) (string, error) {
 	// Adjusts 'topN' based on the actual number of blogs found.
 	var nodes []*cdp.Node
 	err = chromedp.Run(ctx,
-		chromedp.Nodes("ul.lst_view > li.bx", &nodes, chromedp.ByQueryAll),
+		chromedp.Nodes("div.title_area > a", &nodes, chromedp.ByQueryAll),
 	)
 	if err != nil {
 		return "", err
@@ -85,7 +85,7 @@ func ReadNaverBlogs(keywords []string, topN int) (string, error) {
 	// Parallel blog data scraping by goroutines.
 	const numGoroutinesLimit = 20
 	ch := make(chan blog, topN)
-	for i := 1; i <= topN; i++ {
+	for i := 0; i < topN; i++ {
 		go func(i int) {
 			for {
 				mu.Lock()
@@ -105,17 +105,16 @@ func ReadNaverBlogs(keywords []string, topN int) (string, error) {
 			}()
 
 			b := blog{}
-			attrs := make(map[string]string, 0)
 			b.err = chromedp.Run(ctx,
-				chromedp.Text(fmt.Sprintf("li#sp_blog_%d div.title_area", i), &b.title),
-				chromedp.Attributes(fmt.Sprintf("li#sp_blog_%d div.title_area a", i), &attrs),
+				chromedp.Text([]cdp.NodeID{nodes[i].NodeID}, &b.title, chromedp.ByNodeID),
 			)
 			if b.err != nil {
 				b.err = fmt.Errorf("Parent request meet an error: %w", b.err)
 				ch <- b
 				return
 			}
-			b.link = attrs["href"]
+
+			b.link = nodes[i].AttributeValue("href")
 			if !strings.HasPrefix(b.link, "https://blog.naver.com") {
 				b.err = fmt.Errorf("Child request meet an error: Invalid URL")
 				ch <- b
@@ -131,6 +130,7 @@ func ReadNaverBlogs(keywords []string, topN int) (string, error) {
 				subCancel()
 			}()
 
+			attrs := make(map[string]string)
 			b.err = chromedp.Run(subCtx,
 				chromedp.Navigate(b.link),
 				chromedp.WaitVisible("iframe#mainFrame"),
