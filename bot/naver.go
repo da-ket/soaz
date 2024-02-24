@@ -195,6 +195,8 @@ func ReadNaverBlogs(keywords []string, topN int) (string, error) {
 			// Concatenate all words with a single whitespace.
 			removeDuplicateSpaces := regexp.MustCompile(`\s+`)
 			b.content = removeDuplicateSpaces.ReplaceAllString(b.content, " ")
+			// Remove zero width spaces (\u200b).
+			b.content = strings.ReplaceAll(b.content, "\u200B", "")
 
 			ch <- b
 
