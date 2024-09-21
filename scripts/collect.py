@@ -18,21 +18,22 @@ def get_parser():
 		"-n", 
 		"--number", 
 		type=int, 
-		help="set the number of blogs to retrieve", 
+		help="set the number of posts to retrieve",
 		default=3
 	) 
 	parser.add_argument(
 		"-p", 
  		"--platform", 
 		type=str, 
-		help="social-media or search-engine to search keywords from (choose one of from: naverblog)",
-		choices=['naverblog', 'wip:navercafe']
+		help="social-media or search-engine to search keywords from (choose one of from: instagram)",
+		choices=['instagram', 'wip:naverblog']
 	)
 	parser.add_argument(
 		"-q", 
 		"--quiet", 
 		action='store_true',
-		help="set the quiet mode to suppress debug message from command line output")
+		help="set the quiet mode to suppress debug message from command line output"
+	)
 	return parser.parse_args()
 
 if __name__ == "__main__":
